@@ -36,37 +36,31 @@ class ConveyorCalculator:
         self.root = tk.Tk()
         self.root.title("Программа для тягового расчета ленточного конвейера")
 
-        # === АДАПТАЦИЯ РАЗМЕРОВ ОКНА ===
+        
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
 
-        # Устанавливаем размеры окна (60% от экрана, максимум 700x600)
         window_width = min(int(screen_width * 0.60), 700)
         window_height = min(int(screen_height * 0.70), 600)
 
-        # Минимальные размеры
         min_width = 550
         min_height = 450
 
         self.root.geometry(f"{window_width}x{window_height}")
         self.root.minsize(min_width, min_height)
 
-        # Центрирование окна на экране
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
         self.root.geometry(f"+{x}+{y}")
 
         self.root.resizable(True, True)
 
-        # Загрузка настроек, истории и счётчика расчётов
         self.load_settings()
         self.load_history()
         self.load_calculation_counter()
 
-        # Регистрация кириллического шрифта для PDF
         self.register_cyrillic_font()
 
-        # Создание основных фреймов
         self.create_widgets()
 
     def register_cyrillic_font(self):
