@@ -36,31 +36,37 @@ class ConveyorCalculator:
         self.root = tk.Tk()
         self.root.title("Программа для тягового расчета ленточного конвейера")
 
-        
+        # === АДАПТАЦИЯ РАЗМЕРОВ ОКНА ===
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
 
+        # Устанавливаем размеры окна (60% от экрана, максимум 700x600)
         window_width = min(int(screen_width * 0.60), 700)
         window_height = min(int(screen_height * 0.70), 600)
 
+        # Минимальные размеры
         min_width = 550
         min_height = 450
 
         self.root.geometry(f"{window_width}x{window_height}")
         self.root.minsize(min_width, min_height)
 
+        # Центрирование окна на экране
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
         self.root.geometry(f"+{x}+{y}")
 
         self.root.resizable(True, True)
 
+        # Загрузка настроек, истории и счётчика расчётов
         self.load_settings()
         self.load_history()
         self.load_calculation_counter()
 
+        # Регистрация кириллического шрифта для PDF
         self.register_cyrillic_font()
 
+        # Создание основных фреймов
         self.create_widgets()
 
     def register_cyrillic_font(self):
@@ -349,7 +355,7 @@ class ConveyorCalculator:
 
         # 10) Ширина ленты
         tk.Label(frame, text="Ширина ленты (мм):").grid(row=row, column=0, sticky="w", padx=5, pady=pady_val)
-        self.belt_width = ttk.Combobox(frame, values=["500", "650", "800", "1000", "1200", "1400", "1600", "2000"],
+        self.belt_width = ttk.Combobox(frame, values=["500", "650", "800", "1000", "1200", "1400", "1600"],
                                        state="readonly", width=combo_width)
         self.belt_width.grid(row=row, column=1, padx=5, pady=pady_val, sticky="ew")
         row += 1
@@ -390,7 +396,7 @@ class ConveyorCalculator:
         self.maintenance.grid(row=row, column=1, padx=5, pady=pady_val, sticky="ew")
         row += 1
 
-       
+
         frame.columnconfigure(1, weight=1)
 
         tk.Label(frame, text="").grid(row=row, column=0, columnspan=2, pady=5)
@@ -398,7 +404,6 @@ class ConveyorCalculator:
     def update_geometry_fields(self, *args):
         """Обновление полей ввода геометрии при изменении метода"""
         method = self.geometry_method.get()
-
         if method == "hypotenuse":
             self.length_entry.config(state="normal")
             self.angle_entry.config(state="normal")
@@ -1532,16 +1537,31 @@ class ConveyorCalculator:
 
         L = data.get('length', 0)
 
-        roller_count_upper = 3  # из Excel
-        roller_weight = data.get('roller_weight', 9.5)
+
+        belt_width = data.get('belt_width', 1000)
+        roller_masses = {  # Словарь соответствия ширины ленты и масс роликов (верхний, нижний)
+            800: (8, 10.8),
+            1000: (9.5, 13.3),
+            1200: (13.2, 18.8),
+            1400: (15.7, 20.3),
+            1600: (19.2, 27)
+        }
+
+        roller_weight_upper, roller_weight_lower = roller_masses.get(belt_width, (9.5, 13.3))
+
+        roller_count_upper = 3
         roll_distance_upper = data.get('roll_support_distance', 1.5)
-        q_r_upper = (roller_count_upper * roller_weight) / roll_distance_upper
+        q_r_upper = (
+                                roller_count_upper * roller_weight_upper) / roll_distance_upper
 
         roller_count_lower = 2
         roll_distance_lower = roll_distance_upper * 2
-        q_r_lower = (roller_count_lower * roller_weight) / roll_distance_lower
+        q_r_lower = (
+                                roller_count_lower * roller_weight_lower) / roll_distance_lower
+
         q_l = data.get('belt_mass_per_square', 24)
-        capacity = float(self.calculate_capacity(data, self.calculate_cross_section_area(data)))
+        capacity = float(self.calculate_capacity(data, self.calculate_cross_section_area(
+            data)))
         v = data.get('speed', 1.0)
         q_g = capacity / (3.6 * v) if v > 0 else 0
 
