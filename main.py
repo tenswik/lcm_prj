@@ -189,7 +189,7 @@ class ConveyorCalculator:
         self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         notebook = ttk.Notebook(self.scrollable_frame)
-        notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        notebook.pack(fill=tk.BOTH, padx=2, pady=2)
 
         main_frame = ttk.Frame(notebook)
         notebook.add(main_frame, text="Основные данные")
@@ -621,7 +621,7 @@ class ConveyorCalculator:
 
         text_widget.insert(tk.END, "7) ОПРЕДЕЛЕНИЕ РАСЧЁТНОГО СОПРОТИВЛЕНИЯ ДВИЖЕНИЮ (Р)\n")
         text_widget.insert(tk.END, "-" * 60 + "\n")
-        text_widget.insert(tk.END, f"   {results.get('resistance_force', 0)} Н\n\n")
+        text_widget.insert(tk.END, f"   {results.get('resistance_force', 0)} кН\n\n")
 
         text_widget.insert(tk.END, "8) РАСЧЁТНАЯ МОЩНОСТЬ ПРИВОДА\n")
         text_widget.insert(tk.END, "-" * 60 + "\n")
@@ -847,7 +847,7 @@ class ConveyorCalculator:
         text_widget.insert(tk.END, "7) ОПРЕДЕЛЕНИЕ РАСЧЁТНОГО СОПРОТИВЛЕНИЯ ДВИЖЕНИЮ (Р)\n")
         text_widget.insert(tk.END, "-" * 60 + "\n")
         resistance_force = self.get_resistance_force(results)
-        text_widget.insert(tk.END, f"   {resistance_force} Н\n\n")
+        text_widget.insert(tk.END, f"   {resistance_force} кН\n\n")
 
         text_widget.insert(tk.END, "8) РАСЧЁТНАЯ МОЩНОСТЬ ПРИВОДА\n")
         text_widget.insert(tk.END, "-" * 60 + "\n")
@@ -1417,7 +1417,7 @@ class ConveyorCalculator:
 
     def get_min_belt_width(self, data):
         """3) Минимальная допустимая ширина ленты"""
-        capacity = data.get('caapcity', 0)
+        capacity = data.get('capacity', 0)
         speed = data.get('speed', 0)
         density = data.get('density', 0)
 
@@ -1431,7 +1431,7 @@ class ConveyorCalculator:
         res = (capacity * 1.2)/(0.9*0.96)
         return res
 
-    def calculate_cross_section_area(self, data):
+    def get_cross_section_area(self, data):
         """5) Расчёт площади поперечного сечения груза (по формуле из Excel)
 
         F = (b²/4) * {[cos β' + θ(1 - cos β')]² * (tan φ₀ + tan β') - θ² * tan β'}
@@ -1528,14 +1528,14 @@ class ConveyorCalculator:
 
         return omega
 
-    def calculate_resistance_force(self, data):
+    def get_resistance_force(self, data):
         """7) Расчёт сопротивления движению ленты (по формуле из Excel)
 
         P = gL[(qг + q'р + q''р + 2qл) · ωcosβ + qгsinβ]
         """
         g = 9.81
-
-        L = data.get('length', 0)
+        data = self.collect_data()
+        L = data.get('length')
 
 
         belt_width = data.get('belt_width', 1000)
@@ -1551,21 +1551,19 @@ class ConveyorCalculator:
 
         roller_count_upper = 3
         roll_distance_upper = data.get('roll_support_distance', 1.5)
-        q_r_upper = (
-                                roller_count_upper * roller_weight_upper) / roll_distance_upper
+        q_r_upper = (roller_count_upper * roller_weight_upper) / roll_distance_upper
 
         roller_count_lower = 2
         roll_distance_lower = roll_distance_upper * 2
-        q_r_lower = (
-                                roller_count_lower * roller_weight_lower) / roll_distance_lower
+        q_r_lower = (roller_count_lower * roller_weight_lower) / roll_distance_lower
 
         q_l = data.get('belt_mass_per_square', 24)
-        capacity = float(self.calculate_capacity(data, self.calculate_cross_section_area(
-            data)))
+        capacity = float(self.get_calculated_capacity(data))
+        # self.get_cross_section_area(data)
         v = data.get('speed', 1.0)
-        q_g = capacity / (3.6 * v) if v > 0 else 0
+        q_g = capacity / (3.6 * v)
 
-        beta_deg = data.get('angle', 0)
+        beta_deg = data.get('angle', 18)
         beta_rad = radians(beta_deg)
         operating_conditions = self.get_operating_conditions(data)
         omega = self.get_resistance_coefficient(data, operating_conditions)
@@ -1580,8 +1578,7 @@ class ConveyorCalculator:
         P = g * L * (friction_component + lift_component) / 1000
 
         return f"{abs(P):.1f}"
-
-    def calculate_drive_power(self, data, resistance_force_str):
+    def get_drive_power(self, data):
         """8) Расчёт мощности привода (по формуле из Excel)
 
         Nгр = (P * v * K) / h
@@ -1591,12 +1588,11 @@ class ConveyorCalculator:
         - K = 1.32 - коэффициент запаса мощности
         - h = 0.85 - КПД двигателя
         """
-        try:
-            P = float(resistance_force_str)  # сопротивление в кН
-        except:
-            P = 0
 
-        v = data.get('speed', 0)  # скорость ленты, м/с
+        P = float(self.get_resistance_force(data))  # сопротивление в кН
+
+        data = self.collect_data()
+        v = data.get('speed', 1)  # скорость ленты, м/с
 
         K = 1.32
         h = 0.85
